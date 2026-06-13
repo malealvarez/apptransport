@@ -1,4 +1,8 @@
 import {useState, useRef, useEffect} from "react";
+
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "./firebase";
+
 import {
   LayoutDashboard, Users, Car, Receipt, HeartPulse,
   Sun, Moon, ArrowUpRight, ArrowDownLeft, Clock, MapPin,
@@ -46,6 +50,26 @@ const fmt=n=>n?`$${Number(n).toLocaleString("es-AR")}`:"—";
 const BASE=17;
 
 export default function App() {
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [user, setUser] = useState(null);
+
+  const handleLogin = async () => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    setUser(userCredential.user);
+    console.log("Logueado:", userCredential.user);
+  } catch (error) {
+    console.error("Error login:", error.message);
+  }
+};
+
   const [dark,setDark]=useState(()=>localStorage.getItem("theme")==="dark");
   const T=dark?DARK:LIGHT;
   const applyColors=ds=>ds.map((d,i)=>({...d,color:T.colors[i%T.colors.length]}));
@@ -235,8 +259,43 @@ export default function App() {
   );
 
   return (
-    <div style={{fontFamily:"'Segoe UI',sans-serif",background:T.bg,minHeight:"100vh",display:"flex",flexDirection:"column",color:T.text,transition:"background .3s,color .3s",fontSize:BASE}}>
-      <style>{`
+
+    <div>
+
+      {/* 🔐 SI NO HAY USUARIO → LOGIN */}
+      {!user && (
+        <div style={{ padding: 20 }}>
+        
+          <h2>Login</h2>
+
+          <input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button onClick={handleLogin}>
+            Iniciar sesión
+          </button>
+
+      </div>
+      )}
+
+      {/* 🟢 SI HAY USUARIO → APP COMPLETA */}
+      {user && (
+        <div>
+          <h3>Bienvenido {user.email}</h3>
+
+
+      <div style={{fontFamily:"'Segoe UI',sans-serif",background:T.bg,minHeight:"100vh",display:"flex",flexDirection:"column",color:T.text,transition:"background .3s,color .3s",fontSize:BASE}}>
+        <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
@@ -733,7 +792,9 @@ export default function App() {
         </div>
       )}
     </div>
-  );
+    </div>
+)}
+</div>
+);
 }
-
 
