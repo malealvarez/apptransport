@@ -326,10 +326,11 @@ if (loading) return (
 
   return (
 
-      <div style={{fontFamily:"'Segoe UI',sans-serif",background:T.bg,minHeight:"100vh",display:"flex",flexDirection:"column",color:T.text,transition:"background .3s,color .3s",fontSize:BASE}}>
+      <div style={{fontFamily:"'Segoe UI',sans-serif",background:T.bg,minHeight:"100vh",width:"100%",display:"flex",flexDirection:"column",color:T.text,transition:"background .3s,color .3s",fontSize:BASE}}>
         <style>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { margin: 0; width: 100%; }
+        html { width: 100%; }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         .spin { animation: spin 1s linear infinite; }
         @media (max-width: 600px) {
