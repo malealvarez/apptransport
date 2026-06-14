@@ -1,6 +1,6 @@
 import {useState, useRef, useEffect} from "react";
 
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
 
 import {
@@ -54,21 +54,8 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null);
-
-  const handleLogin = async () => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-
-    setUser(userCredential.user);
-    console.log("Logueado:", userCredential.user);
-  } catch (error) {
-    console.error("Error login:", error.message);
-  }
-};
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loginError, setLoginError] = useState("");
 
   const [dark,setDark]=useState(()=>localStorage.getItem("theme")==="dark");
   const T=dark?DARK:LIGHT;
@@ -91,24 +78,48 @@ export default function App() {
 
   const cd=applyColors(drivers);
 
-  // ---- Firebase listeners ----
-  useEffect(()=>{
-    const unsubs=[
-      onSnapshot(collection(db,"drivers"),snap=>{
-        setDrivers(snap.docs.map(d=>({id:d.id,...d.data()})));
-      }),
-      onSnapshot(collection(db,"clients"),snap=>{
-        setClients(snap.docs.map(d=>({id:d.id,...d.data()})));
-      }),
-      onSnapshot(collection(db,"obrasSociales"),snap=>{
-        setObrasSociales(snap.docs.map(d=>({id:d.id,...d.data()})));
-        setLoading(false);
-      }),
-    ];
-    return()=>unsubs.forEach(u=>u());
-  },[]);
+  // Detecta si ya había una sesión activa al abrir la app
+useEffect(() => {
+  const unsub = onAuthStateChanged(auth, (u) => {
+    setUser(u);
+    setAuthLoading(false);
+  });
+  return () => unsub();
+}, []);
 
-  useEffect(()=>{ localStorage.setItem("theme",dark?"dark":"light"); },[dark]);
+const handleLogin = async () => {
+  setLoginError("");
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    setLoginError("Email o contraseña incorrectos");
+  }
+};
+
+const handleLogout = async () => {
+  await signOut(auth);
+  setUser(null);
+};
+
+// Los listeners de Firestore solo se activan cuando hay usuario logueado
+useEffect(() => {
+  if (!user) return; // ← ESTA ES LA CLAVE: no conecta si no hay login
+
+  const unsubs = [
+    onSnapshot(collection(db, "drivers"), snap => {
+      setDrivers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }),
+    onSnapshot(collection(db, "clients"), snap => {
+      setClients(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }),
+    onSnapshot(collection(db, "obrasSociales"), snap => {
+      setObrasSociales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }),
+  ];
+
+  return () => unsubs.forEach(u => u());
+}, [user]); // ← depende de `user`, se reactiva cuando cambia
 
   // ---- helpers ----
   const getDriverTransfers=(driverId,day)=>
@@ -250,49 +261,70 @@ export default function App() {
     </div>
   );
 
-  if(loading) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:T.bg,gap:16}}>
-      <Loader size={36} color={T.accent} style={{animation:"spin 1s linear infinite"}}/>
-      <div style={{color:T.muted,fontSize:BASE}}>Cargando datos...</div>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+  if (authLoading) return (
+  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100vh", background:"#F2F3F6", gap:16 }}>
+    <Loader size={36} color="#8BAAC2" style={{ animation:"spin 1s linear infinite" }}/>
+    <div style={{ color:"#7B8699", fontSize:17 }}>Iniciando...</div>
+    <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
+
+// Pantalla de login si no hay usuario
+if (!user) return (
+  <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"#F2F3F6" }}>
+    <div style={{ background:"#fff", borderRadius:20, padding:36, width:"min(90vw,380px)", boxShadow:"0 4px 30px #0001", border:"1px solid #DDE0E8" }}>
+      <div style={{ textAlign:"center", marginBottom:28 }}>
+        <Car size={36} color="#8BAAC2"/>
+        <div style={{ fontWeight:800, fontSize:22, color:"#2E3440", marginTop:10 }}>TransporteApp</div>
+        <div style={{ fontSize:14, color:"#7B8699", marginTop:4 }}>Ingresá para continuar</div>
+      </div>
+      <div style={{ marginBottom:12 }}>
+        <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#7B8699", marginBottom:4 }}>Email</label>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleLogin()}
+          placeholder="tu@email.com"
+          style={{ width:"100%", padding:"10px 14px", borderRadius:10, border:"1.5px solid #DDE0E8", fontSize:15, boxSizing:"border-box", background:"#F0F1F5", color:"#2E3440", outline:"none" }}
+        />
+      </div>
+      <div style={{ marginBottom:20 }}>
+        <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#7B8699", marginBottom:4 }}>Contraseña</label>
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleLogin()}
+          placeholder="••••••••"
+          style={{ width:"100%", padding:"10px 14px", borderRadius:10, border:"1.5px solid #DDE0E8", fontSize:15, boxSizing:"border-box", background:"#F0F1F5", color:"#2E3440", outline:"none" }}
+        />
+      </div>
+      {loginError && (
+        <div style={{ background:"#F5EDF1", color:"#C4A0B0", borderRadius:8, padding:"8px 12px", fontSize:13, marginBottom:14, textAlign:"center" }}>
+          {loginError}
+        </div>
+      )}
+      <button
+        onClick={handleLogin}
+        style={{ width:"100%", padding:"12px", borderRadius:10, border:"none", background:"#8BAAC2", color:"#fff", fontWeight:700, fontSize:16, cursor:"pointer" }}
+      >
+        Iniciar sesión
+      </button>
     </div>
-  );
+  </div>
+);
+
+// Si hay usuario pero los datos siguen cargando
+if (loading) return (
+  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100vh", background:"#F2F3F6", gap:16 }}>
+    <Loader size={36} color="#8BAAC2" style={{ animation:"spin 1s linear infinite" }}/>
+    <div style={{ color:"#7B8699", fontSize:17 }}>Cargando datos...</div>
+    <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
 
   return (
-
-    <div>
-
-      {/* 🔐 SI NO HAY USUARIO → LOGIN */}
-      {!user && (
-        <div style={{ padding: 20 }}>
-        
-          <h2>Login</h2>
-
-          <input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button onClick={handleLogin}>
-            Iniciar sesión
-          </button>
-
-      </div>
-      )}
-
-      {/* 🟢 SI HAY USUARIO → APP COMPLETA */}
-      {user && (
-        <div>
-          <h3>Bienvenido {user.email}</h3>
-
 
       <div style={{fontFamily:"'Segoe UI',sans-serif",background:T.bg,minHeight:"100vh",display:"flex",flexDirection:"column",color:T.text,transition:"background .3s,color .3s",fontSize:BASE}}>
         <style>{`
@@ -791,10 +823,7 @@ export default function App() {
           </div>
         </div>
       )}
-    </div>
-    </div>
-)}
 </div>
-);
+  );
 }
 
