@@ -371,7 +371,7 @@ if (loading) return (
         </div>
       </div>
 
-      <div style={{flex:1,padding:"16px 12px",maxWidth:980,margin:"0 auto",width:"100%"}}>
+      <div style={{flex:1,padding:"16px 24px",width:"100%"}}>
 
         {/* DASHBOARD */}
         {tab==="dashboard"&&(
