@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Car, Receipt, HeartPulse,
   Sun, Moon, ArrowUpRight, ArrowDownLeft, Clock, MapPin,
   Phone, Mail, Home, GraduationCap, Paperclip, Plus,
-  Search, ChevronRight, Info, X, Check, Pencil, Trash2, Loader
+  Search, ChevronRight, Info, X, Check, Pencil, Trash2, Loader, LogOut
 } from "lucide-react";
 import {
   collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot
@@ -350,10 +350,16 @@ if (loading) return (
             <div style={{fontWeight:800,fontSize:BASE*1.1,color:"#fff",letterSpacing:.5}}>TransporteApp</div>
             <div style={{fontSize:BASE*0.68,color:"rgba(255,255,255,0.7)"}}>Gestión de traslados</div>
           </div>
-          <button onClick={()=>setDark(d=>!d)} style={{display:"flex",alignItems:"center",gap:5,background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#fff",fontSize:BASE*0.72,fontWeight:600}}>
-            {dark?<Sun size={14}/>:<Moon size={14}/>}
-            <span className="hide-mobile">{dark?"Claro":"Oscuro"}</span>
-          </button>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setDark(d=>!d)} style={{display:"flex",alignItems:"center",gap:5,background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#fff",fontSize:BASE*0.72,fontWeight:600}}>
+              {dark?<Sun size={14}/>:<Moon size={14}/>}
+              <span className="hide-mobile">{dark?"Claro":"Oscuro"}</span>
+            </button>
+            <button onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:5,background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:20,padding:"6px 12px",cursor:"pointer",color:"#fff",fontSize:BASE*0.72,fontWeight:600}}>
+              <LogOut size={14}/>
+              <span className="hide-mobile">Salir</span>
+            </button>
+          </div>
         </div>
         {/* Nav — scrollable on mobile */}
         <div style={{display:"flex",width:"100%",overflowX:"auto",scrollbarWidth:"none"}}>
